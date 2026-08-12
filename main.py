@@ -242,7 +242,7 @@ class AutoClickerGUI(ctk.CTk):
 
         self.profile_dropdown = ctk.CTkOptionMenu(
             prof_controls, variable=self.active_profile_var,
-            values=["Default"], command=self.on_profile_selected,
+            values=["Default", "Custom"], command=self.on_profile_selected,
             width=210, height=34, corner_radius=8
         )
         self.profile_dropdown.pack(side="left", padx=(0, 10))
@@ -552,17 +552,13 @@ class AutoClickerGUI(ctk.CTk):
     def refresh_profiles_ui(self):
         profiles, active = self.profile_manager.load_profiles()
         profile_names = list(profiles.keys())
+        if "Custom" not in profile_names:
+            profile_names.append("Custom")
+
         self.profile_dropdown.configure(values=profile_names)
         self.active_profile_var.set(active)
         
         current_profile_data = profiles.get(active, {})
-        theme_mode = current_profile_data.get("appearance_mode", "Light")
-        if theme_mode not in ["Light", "Dark"]:
-            theme_mode = "Light"
-
-        self.theme_mode_var.set(theme_mode)
-        self.apply_theme_mode(theme_mode)
-
         self.apply_profile_settings(current_profile_data)
 
     def apply_profile_settings(self, settings: dict):
@@ -583,12 +579,8 @@ class AutoClickerGUI(ctk.CTk):
         self.pos_x_var.set(str(settings.get("x", 0)))
         self.pos_y_var.set(str(settings.get("y", 0)))
 
-        mode = settings.get("appearance_mode", "Light")
-        if mode not in ["Light", "Dark"]:
-            mode = "Light"
-
-        self.theme_mode_var.set(mode)
-        self.apply_theme_mode(mode)
+        # Preserve the user's active theme selection across profile changes
+        self.apply_theme_mode(self.theme_mode_var.get())
 
         self.toggle_repeat_entry()
         self.toggle_position_entries()
@@ -599,22 +591,9 @@ class AutoClickerGUI(ctk.CTk):
         self.show_error(f"Loaded Profile: {active}")
 
     def prompt_save_new_profile(self):
+        active = self.active_profile_var.get()
         settings = self.validate_inputs()
         if not settings:
-            return
-
-        dialog = ctk.CTkInputDialog(
-            text="Enter a name for the profile:",
-            title="Save Profile"
-        )
-        profile_name = dialog.get_input()
-
-        if profile_name is None:
-            return
-
-        profile_name = profile_name.strip()
-        if not profile_name:
-            self.show_error("Profile name cannot be empty.")
             return
 
         saved_dict = {
@@ -631,17 +610,44 @@ class AutoClickerGUI(ctk.CTk):
             "y": settings["y"],
             "appearance_mode": self.theme_mode_var.get()
         }
-        profiles, active = self.profile_manager.save_profile(profile_name, saved_dict)
-        self.refresh_profiles_ui()
-        self.show_error(f"Saved new profile: '{profile_name}'")
-        logging.info(f"Saved new custom profile: {profile_name}")
+
+        # Allow creation of a NEW named profile ONLY when 'Custom' profile is selected
+        if active == "Custom":
+            dialog = ctk.CTkInputDialog(
+                text="Enter a name for your new custom profile:",
+                title="Save Custom Profile"
+            )
+            profile_name = dialog.get_input()
+
+            if profile_name is None:
+                return
+
+            profile_name = profile_name.strip()
+            if not profile_name:
+                self.show_error("Profile name cannot be empty.")
+                return
+
+            if profile_name == "Custom":
+                self.show_error("Please choose a profile name other than 'Custom'.")
+                return
+
+            profiles, new_active = self.profile_manager.save_profile(profile_name, saved_dict)
+            self.refresh_profiles_ui()
+            self.show_error(f"Saved new profile: '{profile_name}'")
+            logging.info(f"Saved new custom profile: {profile_name}")
+        else:
+            # Update settings for the currently active profile
+            profiles, new_active = self.profile_manager.save_profile(active, saved_dict)
+            self.refresh_profiles_ui()
+            self.show_error(f"Updated profile '{active}'")
+            logging.info(f"Updated profile: {active}")
 
     def prompt_delete_profile(self):
         profiles, active = self.profile_manager.load_profiles()
-        deletable_profiles = [name for name in profiles.keys() if name != "Default"]
+        deletable_profiles = [name for name in profiles.keys() if name not in ["Default", "Custom"]]
 
         if not deletable_profiles:
-            self.show_error("No custom profiles available to delete (Default cannot be deleted).")
+            self.show_error("No user-created custom profiles available to delete.")
             return
 
         DeleteProfileDialog(self, deletable_profiles, self.execute_profile_deletion)
@@ -653,7 +659,7 @@ class AutoClickerGUI(ctk.CTk):
             self.show_error(f"Deleted profile '{target_profile_name}'. Active: {new_active}")
             logging.info(f"Deleted profile: {target_profile_name}")
         else:
-            self.show_error("Cannot delete Default profile.")
+            self.show_error("Cannot delete default system profiles.")
 
     def save_current_settings(self):
         active = self.active_profile_var.get()
