@@ -4,11 +4,13 @@ import ctypes
 from ctypes import wintypes
 import logging
 import customtkinter as ctk
+
 from click_engine import ClickEngine, ClickWorker
 from hotkeys import HotkeyManager
 from settings import SettingsManager, ProfileManager
 from recorder import PositionRecorder
 from tray import SystemTrayManager
+from paths import ensure_app_directories, get_asset_path, LOG_FILE
 
 # --- SINGLE INSTANCE MUTEX CHECK ---
 ERROR_ALREADY_EXISTS = 183
@@ -32,10 +34,11 @@ def check_single_instance():
         return True, None
 
 
-# --- LOGGING SETUP ---
-os.makedirs("logs", exist_ok=True)
+# --- ENSURE APPLICATION DATA DIRECTORIES & LOGGING SETUP ---
+ensure_app_directories()
+
 logging.basicConfig(
-    filename=os.path.join("logs", "autoclicker.log"),
+    filename=str(LOG_FILE),
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
@@ -117,8 +120,8 @@ class AutoClickerGUI(ctk.CTk):
         self.minsize(540, 750)
         self.resizable(True, True)
 
-        # Application Icon
-        icon_path = os.path.abspath("assets/icon.ico")
+        # Application Icon (resolved safely via get_asset_path)
+        icon_path = str(get_asset_path("assets/icon.ico"))
         if os.path.exists(icon_path):
             try:
                 self.iconbitmap(icon_path)

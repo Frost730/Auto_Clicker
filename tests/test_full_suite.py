@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from pathlib import Path
 
 # Add project root directory to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -11,9 +12,10 @@ from hotkeys import HotkeyManager
 from settings import SettingsManager, DEFAULT_SETTINGS
 from recorder import PositionRecorder
 from tray import SystemTrayManager
+from paths import APP_DIR, LOG_DIR, PROFILE_DIR, SETTINGS_FILE, PROFILES_FILE, LOG_FILE, ensure_app_directories
 
 print("==================================================")
-print("   AUTO CLICKER COMPREHENSIVE 24-TEST SUITE       ")
+print("   AUTO CLICKER COMPREHENSIVE 25-TEST SUITE       ")
 print("==================================================")
 
 passed_tests = []
@@ -187,22 +189,25 @@ run_test(21, "Application shutdown handlers", test_21)
 
 # 22. Settings save/load
 def test_22():
-    sm = SettingsManager("test_suite_cfg.json")
+    test_path = APP_DIR / "test_suite_cfg.json"
+    sm = SettingsManager(test_path)
     sm.save_settings({"seconds": 12, "mouse_button": "Right"})
     loaded = sm.load_settings()
     assert loaded["seconds"] == 12
     assert loaded["mouse_button"] == "Right"
-    if os.path.exists("test_suite_cfg.json"): os.remove("test_suite_cfg.json")
+    if test_path.exists(): test_path.unlink()
 run_test(22, "Settings save/load", test_22)
 
 # 23. Corrupted settings
 def test_23():
-    sm = SettingsManager("test_corrupt_cfg.json")
-    with open("test_corrupt_cfg.json", "w") as f: f.write("BAD JSON")
+    test_path = APP_DIR / "test_corrupt_cfg.json"
+    sm = SettingsManager(test_path)
+    with open(test_path, "w") as f: f.write("BAD JSON")
     loaded = sm.load_settings()
     assert loaded == DEFAULT_SETTINGS
-    if os.path.exists("test_corrupt_cfg.json"): os.remove("test_corrupt_cfg.json")
-    if os.path.exists("test_corrupt_cfg.json.corrupted"): os.remove("test_corrupt_cfg.json.corrupted")
+    if test_path.exists(): test_path.unlink()
+    corrupt_backup = test_path.with_suffix(".corrupted")
+    if corrupt_backup.exists(): corrupt_backup.unlink()
 run_test(23, "Corrupted settings recovery", test_23)
 
 # 24. Invalid input
@@ -212,14 +217,23 @@ def test_24():
     assert app.error_banner.cget("text") == "Interval fields must be integers."
 run_test(24, "Invalid non-integer input rejection", test_24)
 
+# 25. LOCALAPPDATA Centralized Paths Verification
+def test_25():
+    ensure_app_directories()
+    assert APP_DIR.exists()
+    assert LOG_DIR.exists()
+    assert PROFILE_DIR.exists()
+    assert str(APP_DIR).endswith("AutoClicker")
+run_test(25, "LOCALAPPDATA paths creation & verification", test_25)
+
 app.destroy()
 
 print("==================================================")
-print(f"   TOTAL TESTS PASSED: {len(passed_tests)} / 24")
+print(f"   TOTAL TESTS PASSED: {len(passed_tests)} / 25")
 print("==================================================")
 
-if len(passed_tests) == 24:
-    print("ALL 24 TEST SUITE SCENARIOS VERIFIED SUCCESSFULLY!")
+if len(passed_tests) == 25:
+    print("ALL 25 TEST SUITE SCENARIOS VERIFIED SUCCESSFULLY!")
     sys.exit(0)
 else:
     sys.exit(1)

@@ -1,12 +1,14 @@
 """
 Settings & Profiles Management Module
-Handles JSON configuration persistence and multiple profile management.
+Handles JSON configuration persistence and multiple profile management safely under %LOCALAPPDATA%\\AutoClicker\\
 """
 
 import json
 import os
 import shutil
 import logging
+from pathlib import Path
+from paths import SETTINGS_FILE, PROFILES_FILE, ensure_app_directories
 
 DEFAULT_SETTINGS = {
     "hours": 0,
@@ -25,11 +27,12 @@ DEFAULT_SETTINGS = {
 
 
 class SettingsManager:
-    def __init__(self, filepath: str = "config.json"):
-        self.filepath = filepath
+    def __init__(self, filepath: str | Path = SETTINGS_FILE):
+        self.filepath = Path(filepath)
+        ensure_app_directories()
 
     def load_settings(self) -> dict:
-        if not os.path.exists(self.filepath):
+        if not self.filepath.exists():
             self.save_settings(DEFAULT_SETTINGS)
             return dict(DEFAULT_SETTINGS)
 
@@ -52,7 +55,7 @@ class SettingsManager:
             return validated
 
         except Exception:
-            corrupted_backup = f"{self.filepath}.corrupted"
+            corrupted_backup = self.filepath.with_suffix(".corrupted")
             try:
                 shutil.copyfile(self.filepath, corrupted_backup)
             except Exception:
@@ -63,6 +66,7 @@ class SettingsManager:
 
     def save_settings(self, settings: dict) -> bool:
         try:
+            ensure_app_directories()
             with open(self.filepath, "w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=4)
             return True
@@ -77,9 +81,11 @@ class SettingsManager:
 class ProfileManager:
     """
     Manages named profiles (Default, Fast Clicking, Slow Clicking, Game Profile, Custom, etc.)
+    stored safely under %LOCALAPPDATA%\\AutoClicker\\
     """
-    def __init__(self, filepath: str = "profiles.json"):
-        self.filepath = filepath
+    def __init__(self, filepath: str | Path = PROFILES_FILE):
+        self.filepath = Path(filepath)
+        ensure_app_directories()
         self.default_profiles = {
             "Default": dict(DEFAULT_SETTINGS),
             "Fast Clicking": {**DEFAULT_SETTINGS, "seconds": 0, "milliseconds": 100},
@@ -92,7 +98,7 @@ class ProfileManager:
         """
         Loads profiles catalog and current active profile name.
         """
-        if not os.path.exists(self.filepath):
+        if not self.filepath.exists():
             data = {
                 "active_profile": "Default",
                 "profiles": dict(self.default_profiles)
@@ -124,6 +130,7 @@ class ProfileManager:
 
     def save_profiles_data(self, data: dict) -> bool:
         try:
+            ensure_app_directories()
             with open(self.filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
             return True
