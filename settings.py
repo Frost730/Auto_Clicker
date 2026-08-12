@@ -22,7 +22,7 @@ DEFAULT_SETTINGS = {
     "position_mode": "Current Position",
     "x": 0,
     "y": 0,
-    "appearance_mode": "Light"
+    "appearance_mode": "Dark"
 }
 
 

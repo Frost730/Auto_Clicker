@@ -44,8 +44,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-# Default appearance mode to Light
-ctk.set_appearance_mode("Light")
+# Default appearance mode to Dark Mode
+ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
 
@@ -157,7 +157,7 @@ class AutoClickerGUI(ctk.CTk):
         self.card_frames = []
 
         self.active_profile_var = ctk.StringVar(value="Default")
-        self.theme_mode_var = ctk.StringVar(value="Light")
+        self.theme_mode_var = ctk.StringVar(value="Dark")
 
         self.hours_var = ctk.StringVar(value="0")
         self.minutes_var = ctk.StringVar(value="0")
@@ -193,7 +193,7 @@ class AutoClickerGUI(ctk.CTk):
         main_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         main_frame.pack(fill="both", expand=True, padx=18, pady=18)
 
-        # Header Title & Theme Switcher (Light / Dark only)
+        # Header Title & Theme Switcher (Dark / Light toggle)
         header_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         header_frame.pack(fill="x", pady=(0, 12))
 
@@ -204,7 +204,7 @@ class AutoClickerGUI(ctk.CTk):
         )
         self.title_label.pack(side="left")
 
-        # Theme Switcher Segmented Control (Light & Dark)
+        # Theme Switcher Segmented Control (Dark & Light)
         header_actions = ctk.CTkFrame(header_frame, fg_color="transparent")
         header_actions.pack(side="right")
 
@@ -215,7 +215,7 @@ class AutoClickerGUI(ctk.CTk):
 
         self.theme_segmented_btn = ctk.CTkSegmentedButton(
             header_actions,
-            values=["Light", "Dark"],
+            values=["Dark", "Light"],
             variable=self.theme_mode_var,
             command=self.on_theme_changed,
             height=30, corner_radius=8
@@ -519,7 +519,7 @@ class AutoClickerGUI(ctk.CTk):
 
     def on_theme_changed(self, new_theme: str):
         """
-        Handles dynamic switching between Light and Dark mode.
+        Handles dynamic switching between Dark and Light mode.
         """
         self.apply_theme_mode(new_theme)
         self.show_error(f"Appearance mode set to '{new_theme}'")
@@ -527,7 +527,7 @@ class AutoClickerGUI(ctk.CTk):
 
     def apply_theme_mode(self, new_theme: str):
         if new_theme not in ["Light", "Dark"]:
-            new_theme = "Light"
+            new_theme = "Dark"
 
         ctk.set_appearance_mode(new_theme)
 

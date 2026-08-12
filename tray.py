@@ -1,27 +1,30 @@
 """
 System Tray Module
 Handles system tray icon creation, context menu, and window minimization/restoration using pystray.
+Ensures tray icon matches application icon perfectly.
 """
 
 import os
 import threading
+from pathlib import Path
 from typing import Callable, Optional
 from PIL import Image
 import pystray
 from pystray import MenuItem as item
+from paths import get_asset_path
 
 
 class SystemTrayManager:
     def __init__(
         self,
-        icon_path: str = "assets/icon.ico",
+        icon_path: str | Path = "assets/icon.ico",
         on_show: Optional[Callable[[], None]] = None,
         on_start: Optional[Callable[[], None]] = None,
         on_stop: Optional[Callable[[], None]] = None,
         on_emergency_stop: Optional[Callable[[], None]] = None,
         on_exit: Optional[Callable[[], None]] = None
     ):
-        self.icon_path = icon_path
+        self.icon_path = str(icon_path)
         self.on_show_cb = on_show
         self.on_start_cb = on_start
         self.on_stop_cb = on_stop
@@ -32,14 +35,22 @@ class SystemTrayManager:
         self.tray_thread = None
 
     def _load_image(self) -> Image.Image:
-        if os.path.exists(self.icon_path):
+        # Resolve icon path using centralized asset path
+        target_path = Path(self.icon_path)
+        if not target_path.exists():
+            target_path = get_asset_path("assets/icon.ico")
+
+        if target_path.exists():
             try:
-                return Image.open(self.icon_path)
+                img = Image.open(target_path)
+                # Convert and scale smoothly to 64x64 RGBA matching window icon
+                img_rgba = img.convert("RGBA")
+                return img_rgba.resize((64, 64), Image.Resampling.LANCZOS)
             except Exception:
                 pass
+
         # Fallback 64x64 colored square if asset missing
-        img = Image.new("RGBA", (64, 64), (59, 130, 246, 255))
-        return img
+        return Image.new("RGBA", (64, 64), (59, 130, 246, 255))
 
     def create_tray(self):
         menu = pystray.Menu(
